@@ -1,0 +1,46 @@
+{
+  "_description": "FROZEN API CONTRACTS – Do not change without full team agreement",
+
+  "analyze_request": {
+    "endpoint": "POST /api/analyze",
+    "content_type": "multipart/form-data",
+    "fields": {
+      "old_image": { "type": "file", "required": true, "description": "Current room image (JPEG/PNG/WebP)" },
+      "new_image": { "type": "file", "required": true, "description": "Ideal room image (JPEG/PNG/WebP)" },
+      "budget":    { "type": "float", "required": false, "description": "User budget in USD" }
+    }
+  },
+
+  "analyze_response": {
+    "score":          { "type": "float",   "description": "0.0 to 1.0 damage/difference score" },
+    "estimated_cost": { "type": "float",   "description": "Total estimated renovation cost in USD" },
+    "optimized":      { "type": "boolean", "description": "Whether plan was optimized for budget" },
+    "plan": {
+      "type": "array",
+      "items": {
+        "task":        { "type": "string", "description": "Task name" },
+        "priority":    { "type": "string", "enum": ["high", "medium", "low"] },
+        "cost":        { "type": "float",  "description": "Estimated cost for this task" },
+        "description": { "type": "string", "description": "Detailed description" }
+      }
+    },
+    "explanation": { "type": "string", "description": "LLM-generated explanation" }
+  },
+
+  "history_response": {
+    "endpoint": "GET /api/history/{user_id}",
+    "items": {
+      "project_id":    { "type": "string" },
+      "created_at":    { "type": "string", "format": "ISO 8601" },
+      "score":         { "type": "float" },
+      "estimated_cost": { "type": "float" },
+      "optimized":     { "type": "boolean" }
+    }
+  },
+
+  "feature_vector": {
+    "_note": "Internal contract between Member 3 (AI) and Member 4 (Pipeline)",
+    "features": ["cracks", "paint", "lighting", "floor", "ceiling"],
+    "value_range": "0.0 to 1.0 for each feature"
+  }
+}

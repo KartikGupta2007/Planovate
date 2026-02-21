@@ -1,0 +1,23 @@
+# ============================================
+# RenovAI Backend Dependencies
+# OWNER: Member 4 – Manages this file
+# ============================================
+
+# Web Framework
+fastapi==0.115.0
+uvicorn==0.30.0
+python-multipart==0.0.9
+
+# Environment
+python-dotenv==1.0.1
+
+# Computer Vision (Member 3)
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+
+# LLM (Member 4 – uncomment your choice)
+# openai==1.40.0
+# google-generativeai==0.7.0
+
+# Data Validation
+pydantic==2.8.0
