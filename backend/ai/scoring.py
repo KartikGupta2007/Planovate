@@ -1,63 +1,99 @@
-# ============================================
-# OWNER: Member 3 – AI / Computer Vision
-# FILE: Damage Scoring & Priority Analysis
-# ============================================
+"""
+Scoring Engine – deterministic DV computation, damage scoring,
+classification, and priority ranking.
+NO LLM usage here.
+"""
+from __future__ import annotations
 
-import numpy as np
-from .feature_vector import FEATURE_NAMES
+from typing import Dict, List, Tuple
 
-# Weights for each feature in overall score calculation
-FEATURE_WEIGHTS = {
-    "cracks": 0.25,
-    "paint": 0.20,
-    "lighting": 0.15,
-    "floor": 0.25,
-    "ceiling": 0.15,
+from config import get_weights
+
+
+# ---------------------------------------------------------------------------
+# Delta Vector
+# ---------------------------------------------------------------------------
+
+
+def compute_delta_vector(
+    current: Dict[str, float], ideal: Dict[str, float]
+) -> Dict[str, float]:
+    """DV = abs(IV - CV) per component, clamped to [0,1]."""
+    return {
+        k: float(min(1.0, max(0.0, abs(ideal[k] - current[k]))))
+        for k in current
+    }
+
+
+# ---------------------------------------------------------------------------
+# Damage Score
+# ---------------------------------------------------------------------------
+
+
+def compute_damage_score(delta: Dict[str, float]) -> float:
+    """Weighted sum of DV components using config weights."""
+    weights = get_weights()["feature_weights"]
+    score = sum(delta[k] * weights[k] for k in delta)
+    return round(float(min(1.0, max(0.0, score))), 4)
+
+
+# ---------------------------------------------------------------------------
+# Classification
+# ---------------------------------------------------------------------------
+
+
+def classify_damage(score: float) -> str:
+    thresholds = get_weights()["classification_thresholds"]
+    if score <= thresholds["low"]:
+        return "Low"
+    if score <= thresholds["medium"]:
+        return "Medium"
+    return "High"
+
+
+# ---------------------------------------------------------------------------
+# Priority Ranking
+# ---------------------------------------------------------------------------
+
+# Map DV component key → (task name, service key)
+TASK_META: Dict[str, Tuple[str, str]] = {
+    "crack": ("Crack Repair", "crack_repair"),
+    "paint": ("Interior Painting", "painting"),
+    "mold": ("Mold Treatment", "mold_treatment"),
+    "lighting": ("Lighting Upgrade", "lighting_upgrade"),
+    "floor": ("Flooring Replacement", "flooring"),
+    "ceiling": ("Ceiling Repair", "ceiling_repair"),
 }
 
 
-def calculate_damage_score(difference_vector: list[float]) -> float:
+def rank_tasks(delta: Dict[str, float]) -> List[Dict]:
     """
-    Calculate weighted damage score from difference vector.
-    Score = sum(weight_i * diff_i) for each feature.
-    Returns: float between 0.0 and 1.0.
+    Rank tasks by: dv_component * weight * safety_modifier
+    Returns list sorted by impact_score desc.
     """
-    score = 0.0
-    for i, name in enumerate(FEATURE_NAMES):
-        score += FEATURE_WEIGHTS[name] * difference_vector[i]
-    return round(min(score, 1.0), 4)
+    cfg = get_weights()
+    weights = cfg["feature_weights"]
+    safety = cfg["safety_modifiers"]
 
+    scored = []
+    for feature, dv_val in delta.items():
+        if dv_val < 0.01:
+            continue  # skip effectively-zero deltas
+        task_name, service_key = TASK_META[feature]
+        impact = dv_val * weights[feature] * safety[feature]
+        scored.append(
+            {
+                "feature": feature,
+                "name": task_name,
+                "service_key": service_key,
+                "dv_component": round(dv_val, 4),
+                "impact_score": round(impact, 4),
+            }
+        )
 
-def get_priority_tasks(difference_vector: list[float]) -> list[dict]:
-    """
-    Determine renovation priorities based on difference vector.
-    Returns sorted list of tasks by priority (highest difference first).
+    scored.sort(key=lambda x: x["impact_score"], reverse=True)
+    for rank, item in enumerate(scored, start=1):
+        item["priority"] = rank
+        item["id"] = f"task_{item['service_key']}"
 
-    This output feeds into Member 4's cost estimation and optimization.
-    """
-    tasks = []
-    task_labels = {
-        "cracks": "Repair cracks and structural damage",
-        "paint": "Repaint walls and surfaces",
-        "lighting": "Upgrade lighting fixtures",
-        "floor": "Repair or replace flooring",
-        "ceiling": "Fix ceiling issues",
-    }
-
-    for i, name in enumerate(FEATURE_NAMES):
-        diff = difference_vector[i]
-        if diff > 0.1:  # Only include tasks with meaningful differences
-            priority = "high" if diff > 0.6 else "medium" if diff > 0.3 else "low"
-            tasks.append(
-                {
-                    "feature": name,
-                    "task": task_labels[name],
-                    "difference": round(diff, 4),
-                    "priority": priority,
-                    "weight": FEATURE_WEIGHTS[name],
-                }
-            )
-
-    # Sort by difference (highest first)
-    tasks.sort(key=lambda x: x["difference"], reverse=True)
-    return tasks
+    return scored
