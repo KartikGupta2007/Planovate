@@ -9,34 +9,100 @@ from pathlib import Path
 from datetime import datetime
 import json
 import uuid
+import tempfile
+import os
 
 from .schemas import RenovationResponse, HistoryResponse
 from .dependencies import validate_image_file
-
-# TODO: Uncomment when Member 4 completes the pipeline
-# from services.pipeline import run_pipeline
 
 router = APIRouter()
 
 # Path to storage directory for user history
 STORAGE_DIR = Path(__file__).parent.parent / "storage"
-STORAGE_DIR.mkdir(exist_ok=True)  # Create if it doesn't exist
+STORAGE_DIR.mkdir(exist_ok=True)
+
+
+# ── Helper: Save image bytes to temp file ──
+def _save_temp_image(image_bytes: bytes, suffix: str = ".jpg") -> str:
+    """
+    Save image bytes to a temporary file and return the file path.
+    Member 4's pipeline expects FILE PATHS, not raw bytes.
+    """
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    tmp.write(image_bytes)
+    tmp.close()
+    return tmp.name
+
+
+# ── Helper: Calculate score from diff_vector ──
+def _calculate_score(diff_vector: dict) -> float:
+    """
+    Calculate overall damage score from diff_vector.
+    Weighted average matching Member 3's scoring weights.
+    """
+    weights = {
+        "cracks": 0.25,
+        "paint": 0.20,
+        "lighting": 0.15,
+        "floor": 0.25,
+        "ceiling": 0.15,
+    }
+    score = sum(weights.get(k, 0) * v for k, v in diff_vector.items())
+    return round(min(max(score, 0.0), 1.0), 4)
+
+
+# ── Helper: Map pipeline output → API contract ──
+def _map_pipeline_to_response(pipeline_result: dict) -> dict:
+    """
+    Map Member 4's pipeline output to our frozen API contract.
+
+    Pipeline returns:
+      { estimated_cost_total, optimized_for_budget, plan_items, diff_vector, notes }
+
+    Our API contract expects:
+      { score, estimated_cost, optimized, plan[], explanation }
+    """
+    diff_vector = pipeline_result.get("diff_vector", {})
+    score = _calculate_score(diff_vector)
+
+    # Map plan_items → plan (lowercase priority + rename 'why' → 'description')
+    plan = []
+    for item in pipeline_result.get("plan_items", []):
+        plan.append({
+            "task": item.get("task", ""),
+            "priority": item.get("priority", "low").lower(),
+            "cost": float(item.get("cost", 0)),
+            "description": item.get("why", item.get("task", "")),
+        })
+
+    # Combine notes list into a single explanation string
+    notes = pipeline_result.get("notes", [])
+    explanation = " ".join(notes) if notes else "Renovation plan generated successfully."
+
+    return {
+        "score": score,
+        "estimated_cost": pipeline_result.get("estimated_cost_total", 0),
+        "optimized": pipeline_result.get("optimized_for_budget", False),
+        "plan": plan,
+        "explanation": explanation,
+    }
 
 
 @router.post("/analyze", response_model=RenovationResponse)
 async def analyze_renovation(
     old_image: UploadFile = File(..., description="Current room image"),
     new_image: UploadFile = File(..., description="Ideal room image"),
-    budget: Optional[float] = Form(None, description="Budget in USD (optional)"),
+    budget: Optional[float] = Form(None, description="Budget in INR (optional)"),
 ):
     """
     Main endpoint: Compare old room vs ideal room and generate renovation plan.
 
     Steps:
       1. Validate uploaded files (type + size)
-      2. Read image bytes
+      2. Save images to temp files (pipeline needs file paths)
       3. Call AI pipeline (Member 3 vision → Member 4 pipeline)
-      4. Return structured renovation plan
+      4. Map pipeline output to API contract
+      5. Return structured renovation plan
     """
 
     # ── Step 1: Validate both images ──
@@ -47,23 +113,36 @@ async def analyze_renovation(
     if budget is not None and budget < 0:
         raise HTTPException(status_code=400, detail="Budget cannot be negative.")
 
-    # ── Step 3: Read image bytes into memory ──
+    # ── Step 3: Read image bytes ──
     old_image_bytes = await old_image.read()
     new_image_bytes = await new_image.read()
 
-    # ── Step 4: Call AI pipeline ──
-    # TODO: Replace placeholder with real pipeline call when Member 4 is ready
-    # result = await run_pipeline(old_image_bytes, new_image_bytes, budget)
-    # return result
+    # ── Step 4: Save to temp files (Member 4's pipeline takes file paths) ──
+    old_tmp_path = _save_temp_image(old_image_bytes)
+    new_tmp_path = _save_temp_image(new_image_bytes)
 
-    # Placeholder response until pipeline is connected
-    return RenovationResponse(
-        score=0.0,
-        estimated_cost=0,
-        optimized=False,
-        plan=[],
-        explanation="Pipeline not yet connected. Images received successfully.",
-    )
+    try:
+        # ── Step 5: Call AI pipeline ──
+        from services.pipeline import run_pipeline
+
+        pipeline_result = run_pipeline(
+            old_image_path=old_tmp_path,
+            new_image_path=new_tmp_path,
+            budget=budget,
+            location=None,
+        )
+
+        # ── Step 6: Map pipeline output to our API contract ──
+        response_data = _map_pipeline_to_response(pipeline_result)
+        return RenovationResponse(**response_data)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
+
+    finally:
+        # ── Cleanup: Remove temp files ──
+        os.unlink(old_tmp_path)
+        os.unlink(new_tmp_path)
 
 
 def save_to_history(user_id: str, result: dict) -> None:
