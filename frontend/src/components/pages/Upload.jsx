@@ -178,6 +178,7 @@ const Upload = () => {
         idealImage: idealPhotoUpload.$id,
         budget: finalBudget,
         description: data.description,
+        userId: user.$id, // Add current user's ID
       };
 
       const newProject = await service.createRow(projectData);

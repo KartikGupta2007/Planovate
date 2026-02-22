@@ -42,6 +42,20 @@ export class Service{
             return null;
         }
     }
+
+    async getUserRows(userId){
+        try{
+            return await this.tablesDB.listRows({
+                databaseId: conf.appwriteDatabaseId,
+                tableId: conf.appwriteTableId,
+                queries: [`equal("UserId", ["${userId}"])`]
+            })
+        }
+        catch(error){
+            console.log("Get user rows error:", error)
+            return null;
+        }
+    }
     async getRow(rowId){
         try{
             return await this.tablesDB.getRow({
@@ -56,7 +70,7 @@ export class Service{
         }
     }
 
-    async createRow({title,city,currentImage,idealImage,budget,description}){
+    async createRow({title,city,currentImage,idealImage,budget,description,userId}){
         try{
             return await this.tablesDB.createRow({
                 databaseId: conf.appwriteDatabaseId,
@@ -68,7 +82,8 @@ export class Service{
                     CurrentPhoto: currentImage,
                     Idealphoto: idealImage,
                     Budget: budget,
-                    Description: description
+                    Description: description,
+                    UserId: userId
                 }
             })
         }
@@ -78,7 +93,7 @@ export class Service{
         }
     }
 
-    async updateRow({rowId,title,city,currentImage,idealImage,budget,description}){
+    async updateRow({rowId,title,city,currentImage,idealImage,budget,description,userId}){
         try{
             return await this.tablesDB.updateRow({
                 databaseId: conf.appwriteDatabaseId,
@@ -90,7 +105,8 @@ export class Service{
                     CurrentPhoto: currentImage,
                     Idealphoto: idealImage,
                     Budget: budget,
-                    Description: description
+                    Description: description,
+                    UserId: userId
                 }
             })
         }

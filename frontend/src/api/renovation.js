@@ -5,7 +5,7 @@
 
 import conf from "../Conf/conf";
 ``
-const BASE_URL = "https://planovate-production-dc6d.up.railway.app";
+const BASE_URL = conf.backendApiUrl;
 
 class RenovationAPI {
   constructor() {
@@ -38,7 +38,7 @@ class RenovationAPI {
         formData.append('location', city);
       }
 
-      const response = await fetch(`${this.baseURL}/analyze`, {
+      const response = await fetch(`${this.baseURL}/api/analyze`, {
         method: 'POST',
         body: formData,
       });

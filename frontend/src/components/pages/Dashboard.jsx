@@ -218,7 +218,8 @@ const Dashboard = () => {
 
       try {
         setLoading(true);
-        const response = await service.getAllRows();
+        // Fetch only current user's projects
+        const response = await service.getUserRows(user.$id);
         if (response?.rows) {
           setProjects(response.rows);
         } else if (response?.documents) {
