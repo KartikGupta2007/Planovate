@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import service from "../../appwrite/service";
 import renovationAPI from "../../api/renovation";
+import { logger } from "../../Conf/conf";
 
 const Upload = () => {
   const navigate = useNavigate();
