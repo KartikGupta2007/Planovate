@@ -39,10 +39,12 @@ MAX_IMAGE_SIZE_MB=10
    - `GEMINI_MODEL` = `gemini-2.0-flash`
    - `DEBUG` = `false`
    - `ALLOWED_ORIGINS` = (your frontend URL)
+   - `PYTHONPATH` = `/app` (tells Python where to find modules)
 
 4. **Deploy** - Railway will automatically:
+   - Install Python 3.10 via nixpacks.toml
    - Install dependencies from `backend/requirements.txt`
-   - Start server with Procfile command
+   - Start server with `python -m uvicorn backend.main:app`
    - Expose on generated Railway domain
 
 5. **Verify Deployment**:
