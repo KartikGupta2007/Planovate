@@ -1,9 +1,9 @@
 [phases.setup]
-nixPkgs = ["python310", "python310Packages.pip"]
-aptPkgs = ["libgl1"]
+nixPkgs = ["python311", "python311Packages.pip", "python311Packages.virtualenv"]
+aptPkgs = ["libgl1-mesa-glx", "libglib2.0-0"]
 
 [phases.install]
-cmds = ["pip install -r backend/requirements.txt"]
+cmds = ["pip install --no-cache-dir -r backend/requirements.txt"]
 
 [phases.build]
 cmds = []
