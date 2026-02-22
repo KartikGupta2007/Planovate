@@ -31,8 +31,8 @@ async def generate_explanation(
     # You are a renovation expert. Based on the following analysis:
     # - Overall damage score: {score}
     # - Priority tasks: {priority_tasks}
-    # - Estimated cost: ${estimated_cost}
-    # - User budget: ${budget if budget else 'Not specified'}
+    # - Estimated cost: ₹{estimated_cost}
+    # - User budget: ₹{budget if budget else 'Not specified'}
     #
     # Provide:
     # 1. A brief summary of the room's condition

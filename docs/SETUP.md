@@ -1,4 +1,4 @@
-# RenovAI – Setup Guide
+# Planovate – Setup Guide
 
 ## Prerequisites
 - Node.js 18+

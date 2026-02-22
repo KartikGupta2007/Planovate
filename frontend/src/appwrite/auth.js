@@ -6,26 +6,77 @@
 // TODO: import { account } from "./config";
 // TODO: import { ID } from "appwrite";
 
-export const register = async (name, email, password) => {
-  // TODO: Implement with Appwrite
-  // await account.create(ID.unique(), email, password, name);
-  // await account.createEmailPasswordSession(email, password);
-  // return await account.get();
-};
+import conf from "../Conf/conf.js";
+import { Client, Account, ID } from "appwrite";
 
-export const login = async (email, password) => {
-  // TODO: Implement with Appwrite
-  // await account.createEmailPasswordSession(email, password);
-  // return await account.get();
-};
+export class AuthService {
+    client = new Client();
+    account;
+    constructor(){
+        this.client
+            .setEndpoint(conf.appwriteUrl)
+            .setProject(conf.appwriteProjectId); 
+        this.account = new Account(this.client);
+    }
+    async createAccount({email, password, name}){
+        try {
+            const user = await this.account.create({
+                userId: ID.unique(),
+                email: email,
+                password: password,
+                name:name
+            });
+            if(user){
+                return await this.login({email, password});
+            }else{
+                return user;
+            }
+        } 
+        catch (error) {
+            console.log(error);
+            // Handle specific error cases
+            if (error.code === 409 || error.message.includes('user_already_exists') || error.message.includes('already exists')) {
+                throw new Error('A user with this email already exists. Please login or use a different email.');
+            }
+            throw new Error(error.message || 'Failed to create account. Please try again.');
+        }
+    }
 
-export const logout = async () => {
-  // TODO: Implement with Appwrite
-  // await account.deleteSession("current");
-};
+    async login({email,password}){
+        try{
+            return await this.account.createEmailPasswordSession({
+                email: email,
+                password: password
+            });
+        }
+        catch(error){
+            console.log(error);
+            if (error.code === 401 || error.message.includes('Invalid credentials')) {
+                throw new Error('Invalid email or password. Please try again.');
+            }
+            throw new Error(error.message || 'Login failed. Please try again.');
+        }
+    }
+    
+    async getCurrentUser(){
+        try{
+            return await this.account.get();
+        }
+        catch(error){
+            console.log(error);
+            return null;
+        }
+    }
 
-export const getCurrentUser = async () => {
-  // TODO: Implement with Appwrite
-  // return await account.get();
-  return null;
-};
+    async logout(){
+        try{
+            await this.account.deleteSessions();
+        }
+        catch(error){
+            console.log(error);
+        }
+    }
+}
+
+const authService = new AuthService();
+export default authService;

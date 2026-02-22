@@ -3,7 +3,7 @@
 # FILE: Pricing Engine – Cost Estimation
 # ============================================
 
-# Base renovation rates (USD) – adjust per region
+# Base renovation rates (INR) – adjust per region
 BASE_RATES = {
     "cracks": 2000,     # Crack repair base cost
     "paint": 3000,      # Full room repaint

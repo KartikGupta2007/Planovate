@@ -4,7 +4,7 @@
 // ============================================
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-// TODO: import { getCurrentUser, login, logout, register } from "../appwrite/auth";
+import authService from "../appwrite/auth";
 
 const AuthContext = createContext(null);
 
@@ -13,15 +13,17 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Check if user is already logged in
-    // getCurrentUser().then(setUser).catch(() => setUser(null)).finally(() => setLoading(false));
-    setLoading(false);
+    // Check if user is already logged in
+    authService.getCurrentUser()
+      .then((userData) => setUser(userData))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
   const value = {
     user,
+    setUser,
     loading,
-    // TODO: Expose login, logout, register functions
   };
 
   return (

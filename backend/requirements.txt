@@ -1,5 +1,5 @@
 # ============================================
-# RenovAI Backend Dependencies
+# Planovate Backend Dependencies
 # OWNER: Member 4 – Manages this file
 # ============================================
 

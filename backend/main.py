@@ -9,7 +9,7 @@ from api.routes import router as api_router
 from config import settings
 
 app = FastAPI(
-    title="RenovAI API",
+    title="Planovate API",
     description="Smart Room Renovation Planner Backend",
     version="1.0.0",
 )
@@ -29,7 +29,7 @@ app.include_router(api_router, prefix="/api")
 
 @app.get("/")
 def health_check():
-    return {"status": "ok", "message": "RenovAI API is running"}
+    return {"status": "ok", "message": "Planovate API is running"}
 
 
 # Run: uvicorn main:app --reload

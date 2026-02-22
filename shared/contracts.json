@@ -7,13 +7,13 @@
     "fields": {
       "old_image": { "type": "file", "required": true, "description": "Current room image (JPEG/PNG/WebP)" },
       "new_image": { "type": "file", "required": true, "description": "Ideal room image (JPEG/PNG/WebP)" },
-      "budget":    { "type": "float", "required": false, "description": "User budget in USD" }
+      "budget":    { "type": "float", "required": false, "description": "User budget in INR" }
     }
   },
 
   "analyze_response": {
     "score":          { "type": "float",   "description": "0.0 to 1.0 damage/difference score" },
-    "estimated_cost": { "type": "float",   "description": "Total estimated renovation cost in USD" },
+    "estimated_cost": { "type": "float",   "description": "Total estimated renovation cost in INR" },
     "optimized":      { "type": "boolean", "description": "Whether plan was optimized for budget" },
     "plan": {
       "type": "array",

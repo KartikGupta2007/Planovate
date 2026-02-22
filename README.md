@@ -1,4 +1,4 @@
-# RenovAI – Smart Room Renovation Planner
+# Planovate – Smart Room Renovation Planner
 
 AI-powered web app that compares your current room with your ideal room and generates a renovation plan with cost estimation.
 
@@ -9,7 +9,7 @@ See [docs/SETUP.md](docs/SETUP.md) for full setup instructions.
 ## Project Structure
 
 ```
-RenovAI/
+Planovate/
 ├── frontend/                  # Member 1 – React + Appwrite
 │   ├── src/
 │   │   ├── pages/             # Login, Register, Upload, Dashboard, History
