@@ -1,0 +1,23 @@
+[
+  {
+    "project_id": "0dbcd1b2-5027-4439-826e-2a894be7034d",
+    "created_at": "2026-02-22T06:03:01.188154",
+    "score": 0.1065,
+    "estimated_cost": 79050.29,
+    "optimized": false
+  },
+  {
+    "project_id": "ab93d082-d5df-4ca3-8b36-dc5e6038a51f",
+    "created_at": "2026-02-22T06:18:06.429591",
+    "score": 0.1065,
+    "estimated_cost": 67376.67,
+    "optimized": false
+  },
+  {
+    "project_id": "0cb533f9-2487-4d1b-af09-443d7f3ce6bc",
+    "created_at": "2026-02-22T06:19:45.576116",
+    "score": 0.1065,
+    "estimated_cost": 79050.29,
+    "optimized": false
+  }
+]

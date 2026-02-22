@@ -3,11 +3,15 @@
 # FILE: Main Application Entry Point
 # ============================================
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from api.routes import router as api_router
 from config import settings
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(name)s - %(message)s")
 
 app = FastAPI(
     title="RenovAI API",

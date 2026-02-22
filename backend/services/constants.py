@@ -24,17 +24,18 @@ PRIORITY_MEDIUM_THRESHOLD = 0.33
 DEFAULT_ROOM_AREA_SQFT = 120
 DEFAULT_LIGHTING_UNITS = 4
 
-# Base rates (INR)
-CRACK_REPAIR_PER_SQFT = 120
-PAINT_MATTE_PER_SQFT = 25
-PAINT_WATERPROOF_PER_SQFT = 40
-LIGHTING_BASIC_PER_UNIT = 1200
-FLOORING_TILE_PER_SQFT = 180
-CEILING_BASIC_PER_SQFT = 60
+# Base rates (INR) – realistic Indian market rates (2024-25)
+CRACK_REPAIR_PER_SQFT = 200       # cement putty + primer + finish
+PAINT_MATTE_PER_SQFT = 45         # primer + 2 coats matte paint
+PAINT_WATERPROOF_PER_SQFT = 70    # waterproof primer + 2 coats
+LIGHTING_BASIC_PER_UNIT = 2500    # LED panel light with wiring
+FLOORING_TILE_PER_SQFT = 250      # vitrified tiles + laying + adhesive
+CEILING_BASIC_PER_SQFT = 110      # gypsum board + framework + finishing
 
 # Cost factors
-LABOR_FACTOR = 0.2  # 20% labor surcharge
+LABOR_FACTOR = 0.35  # 35% labor surcharge (Indian market: 30-40%)
 BUFFER_FACTOR = 0.1  # 10% contingency buffer
+MIN_WORK_FACTOR = 0.6  # If a task is needed, price at least 60% of full room cost
 
 # Budget buffer to preserve headroom in optimizer
 BUDGET_BUFFER_FACTOR = 0.1

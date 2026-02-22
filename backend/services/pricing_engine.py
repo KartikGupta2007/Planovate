@@ -34,7 +34,14 @@ def _apply_multiplier(base_cost: float, multipliers: dict[str, float], category:
 
 
 def _compute_task_cost(unit_cost: float, qty: float, diff_value: float) -> float:
-    base_cost = unit_cost * qty * max(diff_value, 0.0)
+    # diff_value = severity of damage (0→1), NOT area percentage.
+    # If a task is included, the WHOLE room needs work (you can't paint half a wall).
+    # Map diff_value to a work factor: [0, 1] → [0.6, 1.0]
+    #   - diff 0.1 → 0.64 (minor issue, but still full-room effort)
+    #   - diff 0.5 → 0.80 (moderate work)
+    #   - diff 1.0 → 1.00 (full renovation intensity)
+    work_factor = constants.MIN_WORK_FACTOR + (max(diff_value, 0.0) * (1.0 - constants.MIN_WORK_FACTOR))
+    base_cost = unit_cost * qty * work_factor
     cost_with_labor = base_cost * (1.0 + constants.LABOR_FACTOR)
     final_cost = cost_with_labor * (1.0 + constants.BUFFER_FACTOR)
     return round(final_cost, 2)
@@ -43,6 +50,7 @@ def _compute_task_cost(unit_cost: float, qty: float, diff_value: float) -> float
 def price_tasks(
     tasks: list[dict[str, Any]],
     location: str | None = None,
+    llm_config: dict[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], float, list[str]]:
     """
     Apply pricing to task list using base rates and optional LLM multipliers.
@@ -53,7 +61,7 @@ def price_tasks(
     multipliers: dict[str, float] = {key: 1.0 for key in constants.LLM_MULTIPLIER_KEYS}
 
     if location:
-        llm_client = get_llm_client()
+        llm_client = get_llm_client(llm_config)
         loc_multipliers, note = llm_client.get_location_multipliers(location)
         if loc_multipliers:
             multipliers.update(loc_multipliers)

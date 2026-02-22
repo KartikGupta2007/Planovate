@@ -83,6 +83,7 @@ def _map_pipeline_to_response(pipeline_result: dict) -> dict:
         "score": score,
         "estimated_cost": pipeline_result.get("estimated_cost_total", 0),
         "optimized": pipeline_result.get("optimized_for_budget", False),
+        "currency": "INR",
         "plan": plan,
         "explanation": explanation,
     }
@@ -93,47 +94,67 @@ async def analyze_renovation(
     old_image: UploadFile = File(..., description="Current room image"),
     new_image: UploadFile = File(..., description="Ideal room image"),
     budget: Optional[float] = Form(None, description="Budget in INR (optional)"),
+    location: Optional[str] = Form(None, description="City/location for price adjustment"),
+    room_area: Optional[float] = Form(None, description="Room area in sqft (auto-estimated if not given)"),
+    llm_provider: Optional[str] = Form(None, description="LLM provider: gemini, openai, ollama"),
+    llm_api_key: Optional[str] = Form(None, description="Your LLM API key"),
+    llm_model: Optional[str] = Form(None, description="LLM model name (e.g. gemini-2.0-flash)"),
+    user_id: Optional[str] = Form(None, description="User ID for saving to history"),
 ):
     """
     Main endpoint: Compare old room vs ideal room and generate renovation plan.
 
-    Steps:
-      1. Validate uploaded files (type + size)
-      2. Save images to temp files (pipeline needs file paths)
-      3. Call AI pipeline (Member 3 vision → Member 4 pipeline)
-      4. Map pipeline output to API contract
-      5. Return structured renovation plan
+    Users can pass their own LLM API key + model to enable AI-powered
+    location pricing and explanations. If not provided, falls back to .env config.
     """
 
     # ── Step 1: Validate both images ──
     await validate_image_file(old_image, label="old_image")
     await validate_image_file(new_image, label="new_image")
 
-    # ── Step 2: Validate budget if provided ──
+    # ── Step 2: Validate budget and room_area if provided ──
     if budget is not None and budget < 0:
         raise HTTPException(status_code=400, detail="Budget cannot be negative.")
+    if room_area is not None and room_area <= 0:
+        raise HTTPException(status_code=400, detail="Room area must be positive.")
 
-    # ── Step 3: Read image bytes ──
+    # ── Step 3: Build LLM config from user-provided values ──
+    llm_config = None
+    if llm_provider or llm_api_key or llm_model:
+        llm_config = {
+            "provider": llm_provider or "",
+            "api_key": llm_api_key or "",
+            "model": llm_model or "",
+        }
+
+    # ── Step 4: Read image bytes ──
     old_image_bytes = await old_image.read()
     new_image_bytes = await new_image.read()
 
-    # ── Step 4: Save to temp files (Member 4's pipeline takes file paths) ──
+    # ── Step 5: Save to temp files (Member 4's pipeline takes file paths) ──
     old_tmp_path = _save_temp_image(old_image_bytes)
     new_tmp_path = _save_temp_image(new_image_bytes)
 
     try:
-        # ── Step 5: Call AI pipeline ──
+        # ── Step 6: Call AI pipeline ──
         from services.pipeline import run_pipeline
 
         pipeline_result = run_pipeline(
             old_image_path=old_tmp_path,
             new_image_path=new_tmp_path,
             budget=budget,
-            location=None,
+            location=location,
+            user_context={"room_area_sqft": room_area} if room_area else None,
+            llm_config=llm_config,
         )
 
         # ── Step 6: Map pipeline output to our API contract ──
         response_data = _map_pipeline_to_response(pipeline_result)
+
+        # ── Step 7: Save to history if user_id provided ──
+        if user_id:
+            save_to_history(user_id, response_data)
+
         return RenovationResponse(**response_data)
 
     except Exception as e:

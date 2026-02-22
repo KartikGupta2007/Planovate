@@ -18,6 +18,7 @@ def run_pipeline(
     budget: float | None,
     location: str | None,
     user_context: dict | None = None,
+    llm_config: dict[str, str] | None = None,
 ) -> dict:
     """Run the RenovAI pipeline and return an API-contract response."""
     notes: list[str] = []
@@ -31,12 +32,22 @@ def run_pipeline(
         notes.append("Budget below minimum; ignoring budget.")
         budget_value = None
 
-    diff_vector, dv_note = _get_diff_vector(old_image_path, new_image_path)
+    diff_vector, coverage_factor, dv_note = _get_diff_vector(old_image_path, new_image_path)
     if dv_note:
         notes.append(dv_note)
 
-    tasks = _build_tasks(diff_vector, user_context or {})
-    priced_tasks, estimated_total, pricing_notes = price_tasks(tasks, location)
+    # Estimate room area: user input > image-based estimation > default
+    context = dict(user_context) if user_context else {}
+    if not context.get("room_area_sqft"):
+        estimated_area = _estimate_area_from_coverage(coverage_factor)
+        context["room_area_sqft"] = estimated_area
+        notes.append(
+            f"Room coverage ~{int(coverage_factor * 100)}% detected; "
+            f"estimated full room area: {estimated_area:.0f} sqft."
+        )
+
+    tasks = _build_tasks(diff_vector, context)
+    priced_tasks, estimated_total, pricing_notes = price_tasks(tasks, location, llm_config)
     notes.extend(pricing_notes)
 
     plan_items = priced_tasks
@@ -54,7 +65,7 @@ def run_pipeline(
             plan_items = priced_tasks
             optimized_for_budget = False
 
-    llm_client = get_llm_client()
+    llm_client = get_llm_client(llm_config)
     if llm_client.enabled():
         rewritten, note = llm_client.rewrite_explanations(plan_items, diff_vector)
         if rewritten:
@@ -80,8 +91,12 @@ def run_pipeline(
     }
 
 
-def _get_diff_vector(old_path: str, new_path: str) -> tuple[dict[str, float], str | None]:
+def _get_diff_vector(
+    old_path: str, new_path: str
+) -> tuple[dict[str, float], float, str | None]:
+    """Returns (diff_vector, coverage_factor, note)."""
     dv = None
+    coverage_factor = constants.DEFAULT_COVERAGE_FACTOR
 
     try:
         from ai.vision import extract_features  # type: ignore
@@ -116,14 +131,26 @@ def _get_diff_vector(old_path: str, new_path: str) -> tuple[dict[str, float], st
         except Exception:
             dv = None
 
+    # Estimate room coverage from the old (current) image
+    try:
+        from ai.vision import analyze_image  # type: ignore
+
+        old_bytes = _read_bytes(old_path)
+        analysis = analyze_image(old_bytes)
+        coverage_info = analysis.get("coverage", {})
+        if isinstance(coverage_info, dict) and "coverage_factor" in coverage_info:
+            coverage_factor = float(coverage_info["coverage_factor"])
+    except Exception:
+        coverage_factor = constants.DEFAULT_COVERAGE_FACTOR
+
     if dv is None:
-        return constants.DEFAULT_DIFF_VECTOR.copy(), "Using fallback diff_vector."
+        return constants.DEFAULT_DIFF_VECTOR.copy(), coverage_factor, "Using fallback diff_vector."
 
     normalized = _normalize_vector(dv)
     if sum(normalized.values()) <= 0.001:
-        return constants.DEFAULT_DIFF_VECTOR.copy(), "Using fallback diff_vector."
+        return constants.DEFAULT_DIFF_VECTOR.copy(), coverage_factor, "Using fallback diff_vector."
 
-    return normalized, None
+    return normalized, coverage_factor, None
 
 
 def _normalize_vector(dv: dict[str, Any]) -> dict[str, float]:
@@ -278,6 +305,17 @@ def _public_plan_item(task: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _estimate_area_from_coverage(coverage_factor: float) -> float:
+    """
+    Estimate full room area based on image coverage.
+    If image shows only 40% of room, scale up: full_area = default / coverage.
+    Capped between DEFAULT and MAX to stay realistic.
+    """
+    cov = max(coverage_factor, 0.3)
+    estimated = constants.DEFAULT_ROOM_AREA_SQFT / cov
+    return min(estimated, constants.MAX_ROOM_AREA_SQFT)
+
+
 def _get_room_area(user_context: dict[str, Any]) -> float:
     area = user_context.get("room_area_sqft")
     try:
@@ -287,12 +325,23 @@ def _get_room_area(user_context: dict[str, Any]) -> float:
     return area_val
 
 
+def _estimate_lighting_units(room_area: float) -> float:
+    """Estimate lighting units based on room area (1 unit per 30 sqft)."""
+    return max(round(room_area / 30.0), constants.DEFAULT_LIGHTING_UNITS)
+
+
 def _get_lighting_units(user_context: dict[str, Any]) -> float:
     units = user_context.get("lighting_units")
     try:
         units_val = float(units)
     except (TypeError, ValueError):
-        units_val = constants.DEFAULT_LIGHTING_UNITS
+        # Derive from room area if available
+        area = user_context.get("room_area_sqft")
+        try:
+            area_val = float(area)
+            units_val = _estimate_lighting_units(area_val)
+        except (TypeError, ValueError):
+            units_val = constants.DEFAULT_LIGHTING_UNITS
     return units_val
 
 
