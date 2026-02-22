@@ -4,8 +4,8 @@
 // ============================================
 
 import conf from "../Conf/conf";
-
-const BASE_URL = "https://planovate-production.up.railway.app";
+``
+const BASE_URL = "https://planovate-production-dc6d.up.railway.app";
 
 class RenovationAPI {
   constructor() {
