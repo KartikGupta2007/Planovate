@@ -16,9 +16,8 @@ requests==2.32.3
 opencv-python-headless==4.10.0.84
 numpy==1.26.4
 
-# LLM (Member 4 – uncomment your choice)
-# openai==1.40.0
-# google-generativeai==0.7.0
+# LLM Integration
+google-generativeai==0.7.0
 
 # Data Validation
 pydantic==2.8.0
