@@ -9,7 +9,7 @@ const BASE_URL = "https://planovate-production.up.railway.app";
 
 class RenovationAPI {
   constructor() {
-    this.baseURL = conf.backendApiUrl;
+    this.baseURL = BASE_URL || conf.backendApiUrl;
   }
 
   /**
