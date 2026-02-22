@@ -1,51 +1,61 @@
 # ============================================
-# OWNER: Member 4 – LLM + Optimization + Deployment
-# FILE: Budget Optimizer
+# OWNER: Person 4 – Budget Optimizer
 # ============================================
+
+from __future__ import annotations
+
+from typing import Any
+
+from . import constants
+
+
+_PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+
+
+def _impact_per_cost(task: dict[str, Any]) -> float:
+    cost = float(task.get("cost", 0))
+    diff_value = float(task.get("diff_value", 0))
+    if cost <= 0:
+        return float("inf")
+    return diff_value / cost
 
 
 def optimize_for_budget(
-    tasks_with_costs: list[dict], budget: float
-) -> tuple[list[dict], bool]:
+    tasks: list[dict[str, Any]],
+    budget: float,
+) -> tuple[list[dict[str, Any]], float, bool]:
     """
-    Optimize renovation plan to fit within user's budget.
+    Greedy optimization based on priority, then impact per cost.
 
-    Strategy:
-        - Sort tasks by priority (high > medium > low)
-        - Allocate budget to high-priority tasks first
-        - Skip or reduce low-priority tasks if over budget
-
-    Input:
-        - tasks_with_costs: list with cost field from pricing engine
-        - budget: user's total budget
-
-    Output:
-        - (optimized_tasks, was_optimized)
-        - optimized_tasks: filtered/adjusted list that fits budget
-        - was_optimized: True if plan was modified to fit budget
+    Returns: (optimized_tasks, budget_used, optimized_flag)
     """
-    total_cost = sum(task["cost"] for task in tasks_with_costs)
+    if budget <= 0:
+        return [], 0.0, True
 
-    # If within budget, no optimization needed
-    if total_cost <= budget:
-        return tasks_with_costs, False
+    usable_budget = budget * (1.0 - constants.BUDGET_BUFFER_FACTOR)
 
-    # Sort by priority: high first, then medium, then low
-    priority_order = {"high": 0, "medium": 1, "low": 2}
+    total_cost = sum(float(task.get("cost", 0)) for task in tasks)
+    if total_cost <= usable_budget:
+        return tasks, round(total_cost, 2), False
+
     sorted_tasks = sorted(
-        tasks_with_costs, key=lambda t: priority_order.get(t["priority"], 3)
+        tasks,
+        key=lambda t: (
+            _PRIORITY_ORDER.get(t.get("priority", "LOW"), 3),
+            -_impact_per_cost(t),
+        ),
     )
 
-    # Greedily include tasks until budget is exhausted
-    optimized = []
-    remaining_budget = budget
+    optimized: list[dict[str, Any]] = []
+    remaining = usable_budget
 
     for task in sorted_tasks:
-        if task["cost"] <= remaining_budget:
+        cost = float(task.get("cost", 0))
+        if cost <= remaining:
             optimized.append(task)
-            remaining_budget -= task["cost"]
-        else:
-            # TODO: Optionally include partial task with reduced scope
-            pass
+            remaining -= cost
+        elif cost == 0:
+            optimized.append(task)
 
-    return optimized, True
+    budget_used = sum(float(task.get("cost", 0)) for task in optimized)
+    return optimized, round(budget_used, 2), True

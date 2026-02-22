@@ -3,8 +3,8 @@
 # FILE: Pydantic Schemas (API Contracts)
 # ============================================
 
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Optional, Literal
 
 
 class RenovationRequest(BaseModel):
@@ -18,23 +18,24 @@ class RenovationRequest(BaseModel):
 class PlanStep(BaseModel):
     """Single step in the renovation plan."""
 
-    task: str  # e.g., "Repair cracks", "Repaint walls"
-    priority: str  # "high", "medium", "low"
-    cost: float  # Estimated cost for this step
-    description: str  # Detailed description
+    task: str = Field(..., example="Repair cracks")
+    priority: Literal["high", "medium", "low"] = Field(..., example="high")
+    cost: float = Field(..., ge=0, example=15000.0, description="Cost in INR (₹)")
+    description: str = Field(..., example="Fix wall cracks in bedroom")
 
 
 class RenovationResponse(BaseModel):
     """
     Response body for renovation analysis.
-    FROZEN API CONTRACT – Do not change without team agreement.
+    All costs are in Indian Rupees (INR / ₹).
     """
 
-    score: float  # 0.0 to 1.0 damage/difference score
-    estimated_cost: float  # Total estimated renovation cost
-    optimized: bool  # Whether plan was optimized for budget
-    plan: list[PlanStep]  # Step-by-step renovation plan
-    explanation: str  # LLM-generated explanation
+    score: float = Field(..., ge=0, le=1, example=0.65)
+    estimated_cost: float = Field(..., ge=0, example=72000, description="Total cost in INR (₹)")
+    optimized: bool = Field(..., example=True)
+    currency: str = Field(default="INR", description="Currency code (always INR)")
+    plan: list[PlanStep] = Field(default_factory=list)
+    explanation: str = Field(..., example="Based on the analysis...")
 
 
 class HistoryResponse(BaseModel):

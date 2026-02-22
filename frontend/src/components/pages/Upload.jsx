@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import service from "../../appwrite/service";
+import renovationAPI from "../../api/renovation";
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const Upload = () => {
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
   const [error, setError] = useState("");
   const [currentPhotoPreview, setCurrentPhotoPreview] = useState(null);
   const [idealPhotoPreview, setIdealPhotoPreview] = useState(null);
@@ -66,20 +68,72 @@ const Upload = () => {
     setAnalyzing(true);
 
     try {
-      // TODO: Replace this with actual backend API call
-      // const currentPhoto = watch("currentPhoto")[0];
-      // const idealPhoto = watch("idealPhoto")[0];
-      // const budget = watch("budget");
+      // Get current form values
+      const currentPhoto = watch("currentPhoto")[0];
+      const idealPhoto = watch("idealPhoto")[0];
+      const budget = watch("budget");
+      const city = watch("city");
+      const title = watch("title");
       
-      // Placeholder: Simulate backend call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call backend API to analyze images
+      const analysisResult = await renovationAPI.analyzeRenovation({
+        currentImage: currentPhoto,
+        idealImage: idealPhoto,
+        budget: budget ? parseFloat(budget) : null,
+        city: city || null,
+        title: title || null,
+      });
       
-      // TODO: Replace with actual backend response
-      const backendDescription = "This is a placeholder description generated from the backend analysis. Your actual backend will analyze the images and budget to generate a detailed renovation plan and description.";
+      // Build comprehensive description with plan details
+      let fullDescription = analysisResult.explanation || "Analysis complete.";
       
-      // Auto-fill the description field
-      setValue("description", backendDescription);
+      // Add plan details if available
+      if (analysisResult.plan && analysisResult.plan.length > 0) {
+        fullDescription += "\n\n📋 DETAILED RENOVATION PLAN:\n\n";
+        
+        let planTotal = 0;
+        analysisResult.plan.forEach((item, index) => {
+          const priorityEmoji = 
+            item.priority === 'high' ? '🔴' : 
+            item.priority === 'medium' ? '🟡' : '🟢';
+          
+          fullDescription += `${index + 1}. ${item.task.toUpperCase()} ${priorityEmoji}\n`;
+          fullDescription += `   Priority: ${item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}\n`;
+          fullDescription += `   Cost: ₹${Math.round(item.cost).toLocaleString()}\n`;
+          fullDescription += `   Details: ${item.description}\n\n`;
+          
+          planTotal += item.cost;
+        });
+        
+        // Add summary with verification
+        fullDescription += `\n💰 COST SUMMARY:\n`;
+        fullDescription += `Individual Tasks Total: ₹${Math.round(planTotal).toLocaleString()}\n`;
+        fullDescription += `Total Estimated Cost: ₹${Math.round(analysisResult.estimated_cost).toLocaleString()}\n`;
+        fullDescription += `Currency: ${analysisResult.currency}\n`;
+        
+        if (analysisResult.optimized) {
+          fullDescription += `✅ This plan has been optimized to fit your budget!\n`;
+        }
+        
+        fullDescription += `\n📊 Overall Condition Score: ${(analysisResult.score * 100).toFixed(1)}%\n`;
+        fullDescription += `(Higher score indicates more renovation work needed)`;
+      }
+      
+      // Auto-fill the description field with comprehensive analysis
+      setValue("description", fullDescription);
+      
+      // Store analysis result for later use (budget auto-fill)
+      setAnalysisResult(analysisResult);
       setAnalyzed(true);
+      
+      // Log for debugging
+      console.log("Analysis complete:", {
+        score: analysisResult.score,
+        estimatedCost: analysisResult.estimated_cost,
+        optimized: analysisResult.optimized,
+        plan: analysisResult.plan,
+      });
+      
     } catch (error) {
       console.error("Analysis error:", error);
       setError(error.message || "Failed to analyze. Please try again.");
@@ -112,12 +166,17 @@ const Upload = () => {
       }
 
       // Step 3: Create database row with file IDs
+      // Use user-provided budget, or if not provided, use backend estimated cost
+      const finalBudget = data.budget 
+        ? parseInt(data.budget) 
+        : (analysisResult?.estimated_cost ? Math.round(analysisResult.estimated_cost) : null);
+      
       const projectData = {
         title: data.title,
         city: data.city,
         currentImage: currentPhotoUpload.$id,
         idealImage: idealPhotoUpload.$id,
-        budget: data.budget ? parseInt(data.budget) : null,
+        budget: finalBudget,
         description: data.description,
       };
 
@@ -385,18 +444,19 @@ const Upload = () => {
                 </label>
                 <textarea
                   id="description"
-                  rows="6"
+                  rows="18"
                   {...register("description", {
                     required: "Description is required",
                   })}
-                  // readOnly
-                  className="w-full px-3 py-2 border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white"
+                  readOnly
+                  className="w-full px-3 py-2 border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 bg-gray-50 font-mono text-sm cursor-default"
+                  style={{ whiteSpace: "pre-wrap" }}
                 />
                 {errors.description && (
                   <p className="text-red-600 text-xs mt-1" style={{ fontFamily: "'Boogaloo', Arial, sans-serif" }}>{errors.description.message}</p>
                 )}
                 <p className="text-xs mt-1" style={{ fontFamily: "'Boogaloo', Arial, sans-serif", color: "#555" }}>
-                  This description was generated based on your images and budget
+                  This description was generated based on your images and budget analysis.
                 </p>
               </div>
             )}
@@ -408,6 +468,7 @@ const Upload = () => {
                   type="button"
                   onClick={() => {
                     setAnalyzed(false);
+                    setAnalysisResult(null);
                     setValue("description", "");
                   }}
                   className="flex-1 font-black text-base uppercase tracking-widest px-6 py-3 rounded-full border-2 border-black transition-all"

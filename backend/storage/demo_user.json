@@ -1,0 +1,16 @@
+[
+  {
+    "project_id": "4d0b6226-fa6a-4b56-8ea8-5474986bad57",
+    "created_at": "2026-02-22T05:20:48.181943",
+    "score": 0.0131,
+    "estimated_cost": 997.92,
+    "optimized": false
+  },
+  {
+    "project_id": "ea3ce2e6-e08d-4380-8a64-74221bb728bc",
+    "created_at": "2026-02-22T05:21:04.248145",
+    "score": 0.017,
+    "estimated_cost": 1322.96,
+    "optimized": false
+  }
+]
