@@ -38,7 +38,7 @@ class RenovationAPI {
         formData.append('location', city);
       }
 
-      const response = await fetch(`${this.baseURL}/api/analyze`, {
+      const response = await fetch(`${this.baseURL}/analyze`, {
         method: 'POST',
         body: formData,
       });
