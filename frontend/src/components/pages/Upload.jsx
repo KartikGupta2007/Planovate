@@ -126,8 +126,8 @@ const Upload = () => {
       setAnalysisResult(analysisResult);
       setAnalyzed(true);
       
-      // Log for debugging
-      console.log("Analysis complete:", {
+      // Log for debugging (dev only)
+      logger.log("Analysis complete:", {
         score: analysisResult.score,
         estimatedCost: analysisResult.estimated_cost,
         optimized: analysisResult.optimized,
@@ -135,7 +135,7 @@ const Upload = () => {
       });
       
     } catch (error) {
-      console.error("Analysis error:", error);
+      logger.error("Analysis error:", error);
       setError(error.message || "Failed to analyze. Please try again.");
     } finally {
       setAnalyzing(false);
@@ -190,7 +190,7 @@ const Upload = () => {
         throw new Error("Failed to create project");
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      logger.error("Upload error:", error);
       setError(error.message || "Failed to upload project. Please try again.");
     } finally {
       setLoading(false);

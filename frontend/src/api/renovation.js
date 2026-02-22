@@ -3,13 +3,14 @@
 // FILE: Renovation API Service
 // ============================================
 
-import conf from "../Conf/conf";
-``
+import conf, { logger } from "../Conf/conf";
+
 const BASE_URL = conf.backendApiUrl;
 
 class RenovationAPI {
   constructor() {
     this.baseURL = BASE_URL || conf.backendApiUrl;
+    logger.log('RenovationAPI initialized with baseURL:', this.baseURL);
   }
 
   /**

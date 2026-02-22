@@ -2,7 +2,7 @@
 // OWNER: Member 1 – Frontend + Appwrite
 // FILE: Appwrite Storage – Image Upload
 // ============================================
-import conf from "../Conf/conf";
+import conf, { logger } from "../Conf/conf";
 import { Client, ID, TablesDB, Storage , Query } from "appwrite";
 
 export class Service{
@@ -25,7 +25,7 @@ export class Service{
                 file: file
             })
         } catch (error) {
-            console.log(error)
+            logger.log(error)
             return null;
         }
     }
@@ -38,7 +38,7 @@ export class Service{
             })
         }
         catch(error){
-            console.log(error)
+            logger.log(error)
             return null;
         }
     }
@@ -54,7 +54,7 @@ export class Service{
             })
         }
         catch(error){
-            console.log("Get user rows error:", error)
+            logger.log("Get user rows error:", error)
             return null;
         }
     }
@@ -67,7 +67,7 @@ export class Service{
             })
         }
         catch(error){
-            console.log(error)
+            logger.log(error)
             return null;
         }
     }
@@ -90,7 +90,7 @@ export class Service{
             })
         }
         catch(error){
-            console.log("Create row error:", error)
+            logger.log("Create row error:", error)
             return null;
         }
     }
@@ -113,7 +113,7 @@ export class Service{
             })
         }
         catch(error){
-            console.log("Update row error:", error)
+            logger.log("Update row error:", error)
             return null;
         }
     }
@@ -130,7 +130,7 @@ export class Service{
             })
         }
         catch(error){
-            console.log(error)
+            logger.log(error)
             return null;
         }
     }
@@ -143,7 +143,7 @@ export class Service{
             })
         }
         catch(error){
-            console.log(error)
+            logger.log(error)
             return null;
         }
     }
@@ -156,7 +156,7 @@ export class Service{
             })
         }
         catch(error){
-            console.log(error)
+            logger.log(error)
             return null;
         }
     }
