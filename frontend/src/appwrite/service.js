@@ -3,7 +3,7 @@
 // FILE: Appwrite Storage – Image Upload
 // ============================================
 import conf from "../Conf/conf";
-import { Client, ID, TablesDB, Storage } from "appwrite";
+import { Client, ID, TablesDB, Storage , Query } from "appwrite";
 
 export class Service{
     client = new Client();
@@ -48,7 +48,9 @@ export class Service{
             return await this.tablesDB.listRows({
                 databaseId: conf.appwriteDatabaseId,
                 tableId: conf.appwriteTableId,
-                queries: [`equal("UserId", ["${userId}"])`]
+                queries:[
+                    Query.equal("UserId", userId)
+                ]
             })
         }
         catch(error){
