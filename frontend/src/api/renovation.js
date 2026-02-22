@@ -5,6 +5,8 @@
 
 import conf from "../Conf/conf";
 
+const BASE_URL = "https://planovate-production.up.railway.app";
+
 class RenovationAPI {
   constructor() {
     this.baseURL = conf.backendApiUrl;
