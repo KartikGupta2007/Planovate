@@ -45,8 +45,21 @@ class RenovationAPI {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Analysis failed: ${response.statusText}`);
+        const contentType = response.headers.get('content-type') || '';
+        let errorMessage = '';
+
+        if (contentType.includes('application/json')) {
+          const errorData = await response.json().catch(() => ({}));
+          errorMessage = errorData.detail || errorData.message || '';
+        } else {
+          errorMessage = await response.text().catch(() => '');
+        }
+
+        if (!errorMessage) {
+          errorMessage = response.statusText || 'Unknown backend error';
+        }
+
+        throw new Error(`Analysis failed (${response.status}): ${errorMessage}`);
       }
 
       const data = await response.json();

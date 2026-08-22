@@ -5,9 +5,46 @@
 
 import os
 from typing import List
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _parse_allowed_hosts(raw_hosts: str) -> List[str]:
+    """Parse ALLOWED_HOSTS entries and normalize URL-style values to hostnames."""
+    normalized_hosts: List[str] = []
+
+    for raw_host in raw_hosts.split(","):
+        host = raw_host.strip()
+        if not host:
+            continue
+
+        if host == "*":
+            normalized_hosts.append("*")
+            continue
+
+        # Accept full URLs like https://api.example.com and extract the hostname.
+        if host.startswith("http://") or host.startswith("https://"):
+            parsed = urlparse(host)
+            candidate = parsed.hostname or ""
+        else:
+            # If users add a path by mistake, keep only the authority segment.
+            candidate = host.split("/")[0]
+
+        candidate = candidate.strip().lower()
+        if candidate:
+            normalized_hosts.append(candidate)
+
+    # De-duplicate while preserving order.
+    seen = set()
+    unique_hosts: List[str] = []
+    for host in normalized_hosts:
+        if host not in seen:
+            unique_hosts.append(host)
+            seen.add(host)
+
+    return unique_hosts
 
 
 class Settings:
@@ -22,11 +59,7 @@ class Settings:
     PORT: int = int(os.getenv("PORT", "8000"))
     
     # Security - Allowed hosts for production
-    ALLOWED_HOSTS: List[str] = [
-        host.strip() 
-        for host in os.getenv("ALLOWED_HOSTS", "").split(",") 
-        if host.strip()
-    ]
+    ALLOWED_HOSTS: List[str] = _parse_allowed_hosts(os.getenv("ALLOWED_HOSTS", ""))
     
     # CORS - Allowed origins
     ALLOWED_ORIGINS: List[str] = [
